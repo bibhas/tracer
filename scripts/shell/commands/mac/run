@@ -7,28 +7,12 @@ from implutils import *
 
 if __name__ == "__main__":
 
-  # Run whatever is in runpath
-  
-  path = Storage.get("runpath")
+  guessed_path = os.path.join(PRJ_PRODUCT_DIR, "tracer")
 
-  if path == None:
-
-    print "Please set runpath first.\n\t$ prefs write runpath './path/to/your/program'\n"
+  if not os.path.exists(guessed_path):
+    
+    print "Could not find %s!!" % guessed_path
 
     exit(-1)
 
-  if not os.path.exists(path):
-
-    guessed_path = os.path.join(PRJ_PRODUCT_DIR, path)
-
-    if not os.path.exists(guessed_path):
-      
-      print "Could not find %s!! Reset runpath from preferences!!" % path
-
-      exit(-1)
-
-    color_log("Warning: %s not found!!\nRunning %s instead..." % (path, guessed_path), "YELLOW")
-
-    path = guessed_path
-
-  os.system(path)
+  os.system(guessed_path)
