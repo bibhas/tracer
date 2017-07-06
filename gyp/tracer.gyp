@@ -25,6 +25,8 @@
         ]
       },
       'dependencies' : [
+        'libs/utils.gyp:utils',
+        'libs/thirdparty/lldb.gyp:lldb',
         'libs/thirdparty/cautils.gyp:cautils',
         'libs/thirdparty/cfpp.gyp:cfpp'
       ],
