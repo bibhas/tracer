@@ -1,0 +1,99 @@
+#!/bin/sh
+# 2017 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys, imp
+from implutils import *
+
+sys.dont_write_bytecode = True
+
+# Prepare definitions from DEFINE file in ROOT_DIR
+
+DEFINES = imp.load_source('defines', os.path.join(ROOT_DIR, 'DEFINES'))
+
+for d in DEFINES.variables.keys():
+
+  DEFINES.variables[d] = "'%s'" % DEFINES.variables[d]
+
+DEFINES.variables["app_target_name"] = (DEFINES.variables["app_name"]).replace(".app", "")
+
+# Helper functions
+
+def move_xcode_projects(srcDir, destDir):
+    
+    if os.path.exists(destDir):
+      
+      os.system("rm -r " + destDir)
+      
+    for root, dirs, files in os.walk(srcDir):
+      
+      for d in dirs:
+        
+        if d.endswith(".xcodeproj"):
+            
+          oldPath = os.path.join(root, d)
+          
+          newPath = oldPath.replace(srcDir, destDir)
+          
+          newPathDir = os.path.split(newPath)[0]
+          
+          if not os.path.exists(newPathDir):
+              
+            os.system("mkdir " + newPathDir)
+            
+          os.system("mv -f %s %s" % (oldPath, newPath))
+
+if __name__ == "__main__":
+    
+    """
+        Generates ninja/xcode files.
+    """
+    
+    ensure_programs_availability(exit_on_failure = True, programs = {
+      
+      "clang++" : "Install Xcode from the Mac App Store.",
+      
+      "gyp" : "CD into driver-api/scripts/deps/gyp and run `sudo python setup.py install`."
+      
+    })
+    
+    definitions = {
+      
+      "ABSOLUTE_ROOT_DIR" : ROOT_DIR,
+
+      "ABSOLUTE_GYP_DIR" : os.path.join(ROOT_DIR, "gyp"),
+      
+      "ABSOLUTE_SOURCE_DIR" : PRJ_SOURCE_DIR,
+
+      "ABSOLUTE_PRODUCT_DIR" : PRJ_PRODUCT_DIR,
+      
+      "CONTAINER" : "none",
+      
+      "APP_VERSION" : readVersion(os.path.join(ROOT_DIR, "VERSION"))
+    }
+
+    definitions.update(DEFINES.variables)
+    
+    if len(sys.argv) > 1 and sys.argv[1] == "xcode":
+      
+      gyp(PRJ_GYP_FILE, defines = definitions, format="xcode")
+    
+      move_xcode_projects(GYP_DIR, os.path.join(ROOT_DIR, "xcode"))
+      
+    elif len(sys.argv) == 1 or (len(sys.argv) > 1 and sys.argv[1] == "ninja"):
+      
+      chk(PRJ_PRODUCT_DIR, make_exist=True)
+      
+      cd(PRJ_BUILD_DIR)
+      
+      # First generate ninja files
+      
+      gyp(PRJ_GYP_FILE, defines = definitions, format="ninja")
+      
+      cd(BUILD_DIR)
+      
+    else:
+      
+      print "Incorrect options. Use ninja or xcode!"
+      
+      exit(-1)

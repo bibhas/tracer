@@ -1,0 +1,2 @@
+I have moved the header files inside on more CF++ dir so that I can include as <CF++/CF++.h> as opposed to <CF++.h>.
+The gyp file handles the include_dir correctly.

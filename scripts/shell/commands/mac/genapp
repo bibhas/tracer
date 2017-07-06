@@ -1,0 +1,184 @@
+#!/bin/sh
+# 2017 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys, imp, datetime
+from implutils import *
+
+def writeFile(filepath, contents):
+
+    dirpath = os.path.dirname(filepath)
+
+    if dirpath == '':
+
+        dirpath = os.getcwd()
+
+    if not os.path.exists(dirpath):
+        
+        os.makedirs(dirpath)
+
+    try:
+
+        os.remove(filepath)
+
+    except OSError:
+
+        pass
+
+    f = open(filepath, "w")
+
+    f.writelines(contents)
+
+    f.close()
+
+if __name__ == "__main__":
+    
+    mainContent = """
+// main.mm
+// %s Bibhas Acharya <mail@bibhas.com>
+
+#include <Cocoa/Cocoa.h>
+#include "AppDelegate.h"
+
+int main(int argc, char **argv) {
+  NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
+  AppDelegate * delegate = [[AppDelegate alloc] init];
+  NSApplication * application = [NSApplication sharedApplication];
+  [application setDelegate:delegate];
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+  [NSApp activateIgnoringOtherApps:YES];
+  [NSApp run];
+  [pool drain];
+  return 0;
+}
+""" % (datetime.datetime.now().year)
+
+    writeFile("main.mm", mainContent.strip("\n"))
+
+    plistContent = """
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleIconFile</key>
+    <string>icon.icns</string>
+    <key>CFBundleExecutable</key>
+    <string>${EXECUTABLE_NAME}</string>
+    <key>CFBundleName</key>
+    <string>${PRODUCT_NAME}</string>
+    <key>CFBundleIdentifier</key>
+    <string>kCFBundleIdentifier</string>
+    <key>CFBundleVersion</key>
+    <string>kCFBundleVersion</string>
+    <key>CFBundleShortVersionString</key>
+    <string>kCFBundleVersion</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
+    <key>ATSApplicationFontsPath</key>
+    <string>fonts</string>
+</dict>
+</plist>"""
+
+    writeFile("Info.plist", plistContent.strip("\n"))
+
+    appDelegateMMContent = """
+// AppDelegate.mm
+// %s Bibhas Acharya <mail@bibhas.com>
+
+#include <Availability.h>
+#include "AppDelegate.h"
+
+#ifndef MAC_OS_X_VERSION_10_12
+// Since MAC_OS_X_VERSION_10_12 isn't defined, we're using a
+// pre 10.12 SDK. That means we need to provide replacement
+// for the newer enum values.
+#define NSWindowStyleMaskTitled NSTitledWindowMask 
+#define NSWindowStyleMaskClosable NSClosableWindowMask
+#define NSWindowStyleMaskResizable NSResizableWindowMask
+#endif
+
+@interface AppDelegate (PRIVATE)
+- (void)setupMenu;
+@end
+
+@implementation AppDelegate {
+  NSWindow *window;
+}
+
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification {       
+  NSRect windowRect = NSMakeRect(0, 0, STARTUP_WINDOW_WIDTH, STARTUP_WINDOW_HEIGHT);
+  window = [[NSWindow alloc] initWithContentRect:windowRect
+    styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
+    backing: NSBackingStoreBuffered 
+    defer:NO];
+  [window setShowsResizeIndicator:YES];
+  [window setPreferredBackingLocation:NSWindowBackingLocationVideoMemory];                                
+  [window setTitle:@"<title>"];
+  [window setDelegate:self];
+  [window center];
+  // Setup contentview
+  NSView *contentView = [window contentView];
+#pragma unused(contentView)
+  // Show window and bring it to front
+  [window makeKeyAndOrderFront:self];
+  [self setupMenu];
+}
+
+- (void)windowDidResize:(NSNotification *)notification {
+}
+
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
+  return NSTerminateNow;
+}
+
+- (BOOL)windowShouldClose:(id)sender {       
+  [NSApp terminate:self];
+  return YES;
+}
+
+- (void)setupMenu {
+  // Create menu bar
+  id menubar = [[NSMenu new] autorelease];
+  id appMenuItem = [[NSMenuItem new] autorelease];
+  [menubar addItem:appMenuItem];
+  // Setup menu items
+  id appMenu = [[NSMenu new] autorelease];
+  id appName = [[NSProcessInfo processInfo] processName];
+  id quitTitle = [@"Quit " stringByAppendingString:appName];
+  id quitMenuItem = [[[NSMenuItem alloc] initWithTitle:quitTitle action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
+  [appMenu addItem:quitMenuItem];
+  [appMenuItem setSubmenu:appMenu];
+  [NSApp setMainMenu:menubar];
+}
+
+@end
+""" % (datetime.datetime.now().year)
+    
+    writeFile("AppDelegate.mm", appDelegateMMContent.strip("\n"))
+
+    appDelegateHContent = """
+// AppDelegate.h
+// %s Bibhas Acharya <mail@bibhas.com>
+
+#pragma once
+
+#include <Cocoa/Cocoa.h>
+
+#define STARTUP_WINDOW_WIDTH    980
+#define STARTUP_WINDOW_HEIGHT   600
+
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
+@end
+
+""" % (datetime.datetime.now().year)
+    
+    writeFile("AppDelegate.h", appDelegateHContent.strip("\n"))
+    

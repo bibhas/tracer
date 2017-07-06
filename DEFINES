@@ -1,0 +1,17 @@
+#!/usr/bin/python
+# 2017 Bibhas Acharya <mail@bibhas.com>
+
+import subprocess
+
+"""
+This is the place to customize the source. Changes will propagate to
+build scripts, installer scripts, built packages as well as the final binary.
+"""
+
+variables = {
+
+  # Build setting
+
+  'macos_sdk_version' : ".".join(subprocess.Popen(["sw_vers", "-productVersion"], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip("\n").split(".")[1:1]) # Change to harcoded values if required. ex '10.12'
+}
+

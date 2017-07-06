@@ -1,0 +1,25 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys
+from implutils import *
+
+if __name__ == "__main__":
+    
+    """
+        Jumps between root and product dir. Since cd is a
+        built-in command, the best we can do here is to print
+        out the absolute paths and hope that the user will do
+        something like this
+        
+            $ cd `jump`
+    """
+    
+    if (os.getcwd() == PRJ_PRODUCT_DIR):
+        
+        print ROOT_DIR
+    
+    else:
+        
+        print PRJ_PRODUCT_DIR

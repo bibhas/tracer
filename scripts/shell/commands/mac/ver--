@@ -1,0 +1,22 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys
+from implutils import *
+
+if __name__ == "__main__":
+    
+    cd(ROOT_DIR, should_log=False)
+    
+    filename = os.path.join("VERSION")
+    
+    oldVersion = readVersion(filename)
+    
+    newVersion = decrementVersion(oldVersion)
+    
+    writeVersion(filename, newVersion)
+    
+    os.system("gen")
+    
+    print "%s -> %s" % (oldVersion, newVersion)

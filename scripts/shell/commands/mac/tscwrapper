@@ -1,0 +1,53 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys, subprocess
+from implutils import *
+
+if __name__ == "__main__":
+    
+    args = sys.argv
+    
+    pos = -1
+    
+    outfile = None
+    
+    for i, arg in enumerate(args):
+        
+        if arg == "--out":
+            
+            pos = i + 1
+            
+            outfile = args[pos]
+            
+            break
+    
+    cmd = "tsc %s" % " ".join(args[1:])
+    
+    proc = subprocess.Popen(
+        
+        ["tsc"] + args[1:],
+        
+        stdout=subprocess.PIPE,
+        
+        stderr=subprocess.PIPE
+    )
+    
+    out, err = proc.communicate()
+    
+    if proc.returncode > 0:
+        
+        print ""
+        
+        for line in out.split("\n")[:-1]:
+            
+            color_log("\t" + line, "WHITE")
+            
+        print ""
+        
+        if os.path.exists(outfile):
+        
+            os.remove(outfile)
+        
+        exit(-1)

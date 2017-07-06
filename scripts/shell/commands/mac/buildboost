@@ -1,0 +1,121 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys
+from implutils import *
+
+if __name__ == "__main__":
+
+  """
+    Sample Usage:
+      'buildboost', 
+      '--prefix="<(PRODUCT_DIR)/boost_build/stripped"',
+      '--cflags=""',
+      '--cxxflags=""',
+      '--linkflags=""'
+  """
+
+  if len(sys.argv) <= 1:
+    
+    color_log("Please provide prefix / cflags / cxxflags / linkflags!", "RED")
+
+    exit(-1)
+
+  prefix = None
+
+  cflags = None
+  
+  cxxflags = None
+
+  linkflags = None
+
+  otherflags = None
+
+  for i in range(0, len(sys.argv)):
+
+    if sys.argv[i].startswith("--prefix="):
+
+      prefix = sys.argv[i].strip("--prefix=")
+      
+      prefix = prefix.strip("\"")
+
+      prefix = prefix.rstrip("\"")
+
+    if sys.argv[i].startswith("--cflags="):
+
+      cflags = sys.argv[i].strip("--cflags=")
+
+      cflags = cflags.strip("\"")
+
+      cflags = cflags.rstrip("\"")
+
+    if sys.argv[i].startswith("--cxxflags="):
+
+      cxxflags = sys.argv[i].strip("--cxxflags=")
+
+      cxxflags = cxxflags.strip("\"")
+
+      cxxflags = cxxflags.rstrip("\"")
+
+    if sys.argv[i].startswith("--linkflags="):
+
+      linkflags = sys.argv[i].strip("--linkflags=")
+
+      linkflags = linkflags.strip("\"")
+
+      linkflags = linkflags.rstrip("\"")
+
+    if sys.argv[i].startswith("--otherflags="):
+
+      otherflags = sys.argv[i].strip("--otherflags=")
+
+      otherflags = otherflags.strip("\"")
+
+      otherflags = otherflags.rstrip("\"")
+
+  # Now that we have all the variables ready, invoke the build steps
+  
+  cd(prefix)
+
+  status = os.system("./bootstrap.sh")
+
+  if status != 0:
+
+    color_log("./bootstrap.sh failed!", "RED")
+
+    exit(-1)
+
+  cmd = ["./b2", "-d2", "link=static"]
+
+  if otherflags != None and otherflags.strip(" ") != "":
+
+    cmd.append(otherflags)
+
+  if cflags != None and cflags.strip(" ") != "":
+
+    cmd.append("cflags=\"%s\"" % cflags)
+
+  if cxxflags != None and cxxflags.strip(" ") != "":
+
+    cmd.append("cxxflags=\"%s\"" % cxxflags)
+
+  if linkflags != None and linkflags.strip(" ") != "":
+
+    cmd.append("linkflags=\"%s\"" % linkflags)
+
+  cmd.append("-j 4")
+
+  cmd.append("stage")
+
+  cmd.append("release")
+
+  print " ".join(cmd)
+
+  status = os.system(" ".join(cmd))
+
+  if status != 0:
+
+    color_log("Boost build (./b2) failed!", "RED")
+
+    exit(-1)

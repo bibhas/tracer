@@ -1,0 +1,56 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys, glob
+from implutils import *
+
+if __name__ == "__main__":
+    
+    """
+        Cleans the build folder.
+    """
+    
+    chk(PRJ_PRODUCT_DIR)
+    
+    cd(PRJ_PRODUCT_DIR)
+    
+    for path in glob.glob("*.app"):
+        
+        rm(path, "-r", should_log=True, silent=True)
+      
+    for path in glob.glob("*.kext"):
+        
+        rm(path, "-r", should_log=True, silent=True)
+    
+    for path in glob.glob("*.driver"):
+        
+        rm(path, "-r", should_log=True, silent=True)
+    
+    for path in glob.glob("*.bundle"):
+        
+        rm(path, "-r", should_log=True, silent=True)
+    
+    for path in glob.glob("*.dSYM"):
+        
+        rm(path, "-r", should_log=True, silent=True)
+    
+    rm("copied", "-r", should_log=True, silent=True)
+
+    rm("boost_build", "-r", should_log=True, silent=True)
+    
+    rm("release", "-r", should_log=True, silent=True)
+
+    rm("distrib", "-r", should_log=True, silent=True)
+
+    rm("signed", "-r", should_log=True, silent=True)
+
+    rm("pkg", "-r", should_log=True, silent=True)
+
+    rm("pkgitems", "-r", should_log=True, silent=True)
+
+    rm("surveyor", "-r", should_log=True, silent=True)
+
+    ninja(clean=True)
+    
+    color_log("Cleanup complete!", "YELLOW")

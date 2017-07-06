@@ -1,0 +1,77 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys
+from implutils import *
+
+if __name__ == "__main__":
+    
+    """
+        Tail stdout of a process to just one line
+    """
+    
+    args = sys.argv
+    
+    kLINERETURNFLAG = "--line-return"
+
+    kTOUCHFILEFLAG = "--touch-file"
+
+    touch_file = None
+
+    should_line_return = False
+
+    acc = []
+
+    for i in range(0, len(args)):
+
+        if args[i].startswith(kTOUCHFILEFLAG):
+
+            touch_file = args[i].split("=")[-1]
+
+        elif args[i] == kLINERETURNFLAG:
+
+            should_line_return = True
+            
+        else:
+
+            acc.append(args[i])
+
+    if len(acc) <= 1:
+        
+        print "Incorrect options!\n"
+        
+        print "Options : \n\t $ linetail [--touch-file=...][--line-return] <executable> <arguments>+"
+        
+        exit(-1)
+    
+    shouldMoveCursorUp = should_line_return
+    
+    executable = acc[1]
+    
+    parameters = acc[2:]
+
+    def filter_func(line):
+        
+        return line
+
+    col = 80
+
+    try:
+
+        rows, columns = os.popen('stty size', 'r').read().split() 
+
+        col = int(columns)
+
+    except:
+        
+        pass
+
+    resp = linetail(filter_func, col - 10, shouldMoveCursorUp, executable, parameters)
+
+    if resp == False:
+
+      exit(-1)
+    if touch_file != None:
+
+      os.system("touch %s" % touch_file)

@@ -1,0 +1,12 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys
+from implutils import *
+
+if __name__ == "__main__":
+    
+    cd(PRJ_PRODUCT_DIR, False)
+    
+    # TODO : Add tests

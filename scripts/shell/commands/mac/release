@@ -1,0 +1,16 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys
+from implutils import *
+
+if __name__ == "__main__":
+  
+    cd(PRJ_PRODUCT_DIR)
+    
+    # The steps we're going to follow for a release are as follows
+
+    # create a 'signed dir' if none exists, else clear its contents
+
+    # codesign the r59surveyor.kext, r59.driver, r59d, maintaintool, Route59.app

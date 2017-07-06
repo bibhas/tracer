@@ -1,0 +1,101 @@
+#!/bin/sh
+# 2017 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys, imp, datetime
+from implutils import *
+
+def mod_copy_file(template, dest, variables, perm=None):
+
+    f = open(template, "r")
+
+    c = f.read()
+
+    f.close()
+
+    f = open(dest, "w")
+
+    f.truncate(0)
+
+    f.writelines(c % variables)
+    
+    f.close()
+
+    if perm != None:
+
+        os.system("chmod %s %s" % (perm, dest))
+
+if __name__ == "__main__":
+
+    if len(sys.argv) != 2:
+        
+        print("Incorrect options.\n\t$ %s <version>" % sys.argv[0])
+
+        exit(-1)
+
+    itemdir = os.path.join(ROOT_DIR, "scripts", "distrib", "pkgitems")
+
+    destdir = os.path.join(PRJ_PRODUCT_DIR, "pkgitems")
+
+    if os.path.exists(destdir):
+
+        os.system("rm -r %s" % destdir)
+
+    os.system("mkdir %s" % destdir)
+
+    variables = {
+
+        "app_version" : sys.argv[1],
+
+        "reference_folder_path" : PRJ_PRODUCT_DIR
+    }
+
+    # pkgproj
+
+    mod_copy_file(
+        
+        os.path.join(itemdir, "installer_template.pkgproj"),
+
+        os.path.join(destdir, "installer.pkgproj"),
+    
+        variables
+    )
+    
+    # preinstall
+
+    mod_copy_file(
+        
+        os.path.join(itemdir, "preinstall_template.py"),
+
+        os.path.join(destdir, "preinstall"),
+    
+        variables,
+
+        "+x"
+    )
+
+    # postinstall
+
+    mod_copy_file(
+        
+        os.path.join(itemdir, "postinstall_template.py"),
+
+        os.path.join(destdir, "postinstall"),
+    
+        variables,
+
+        "+x"
+    )
+
+    # maintaintool
+    
+    mod_copy_file(
+        
+        os.path.join(itemdir, "maintaintool_template.py"),
+
+        os.path.join(destdir, "maintaintool"),
+    
+        variables,
+
+        "+x"
+    )

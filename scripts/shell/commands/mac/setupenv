@@ -1,0 +1,168 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys, glob, subprocess
+from implutils import *
+
+def runProgram(cmd):
+    
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    output, error =  proc.communicate()
+
+    return (output, error, proc.returncode)
+
+def runProgramSystem(cmd, wd=None, env=None):
+    
+    prefix = []
+
+    if wd != None:
+
+        print wd
+
+        prefix.extend(["cd", wd, "&&"])
+
+    if env != None:
+
+        for k in env.keys():
+
+            prefix.extend(["export", "%s=%s" % (str(k), str(env[k])), "&&"])
+            
+    prefix.extend(cmd)
+
+    cmd = prefix
+
+    code = os.system(" ".join(cmd))
+
+    return code
+
+def which(name):
+    
+    output, error, code = runProgram(["which", name])
+    
+    if code != 0:
+
+        return None
+
+    resp = output.strip("\n")
+
+    if resp == "":
+
+        return None
+
+    return resp
+
+def is_brew_cask_installed():
+
+    if os.path.exists("/usr/local/Caskroom"):
+
+        return True
+
+    return False
+
+if __name__ == "__main__":
+
+    color_log_inc("Checking for xcode...", "GRAY")
+
+    if not which("xcodebuild"):
+
+        color_log("no", "GRAY")
+
+        color_log("Xcode is not installed! Please install Xcode from the Mac App Store.", "RED")
+
+        exit(-1)
+
+    else:
+
+        color_log("ok", "GRAY")
+
+    color_log_inc("Checking for brew...", "GRAY")
+
+    if not which("brew"):
+
+        color_log("no", "GRAY")
+
+        color_log("Homebrew not installed! Pleaset install Homebrew Cask as well.", "RED")
+
+        exit(-1)
+
+    else:
+        
+        color_log("ok", "GRAY")
+
+    color_log_inc("Checking for brew cask...", "GRAY")
+
+    if not is_brew_cask_installed():
+
+        color_log("no", "GRAY")
+
+        color_log("Homebrew Cask is not installed! Please google for 'Homebrew Cask' and follow the instructions.")
+
+        exit(-1)
+
+    else:
+
+        color_log("ok", "GRAY")
+
+    color_log_inc("Checking for gyp...", "GRAY")
+
+    if not which("gyp"):
+
+        color_log("no", "GRAY")
+
+        color_log("Installing gyp because it couldn't be found!", "YELLOW")
+
+        code = runProgramSystem(["sudo", "python", "setup.py", "install"], wd=os.path.join(ROOT_DIR, "scripts", "deps", "gyp"))
+        
+        if code != 0:
+
+            color_log("gyp installation failed! Seek developer support to fix this.", "RED")
+
+            exit(-1)
+
+    else:
+
+        color_log("ok", "GRAY")
+
+    color_log_inc("Checking for ninja...", "GRAY")
+
+    if not which("ninja"):
+        
+        color_log("no", "GRAY")
+
+        color_log("Installing ninja because it couldn't be found!", "YELLOW")
+
+        code = runProgramSystem(["brew", "install", "ninja"])
+
+        if code != 0:
+
+            color_log("ninja installation failed! Seek developer support to fix this.", "RED")
+
+            exit(-1)
+    else:
+
+        color_log("ok", "GRAY")
+
+    color_log_inc("Checking for Packages...", "GRAY")
+
+    if not which("packagesbuild"):
+
+        color_log("no", "GRAY")
+
+        color_log("Installing 'Packages' because it couldn't be found!", "YELLOW")
+
+        code = runProgramSystem(["brew", "cask", "install", "packages"])
+
+        if code != 0:
+
+            color_log("Packages installation failed! Seek developer support to fix this.", "RED")
+
+            exit(-1)
+
+    color_log("ok", "GRAY")
+
+    color_log("Environment ready!", "GREEN")
+
+
+        

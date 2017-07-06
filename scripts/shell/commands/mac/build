@@ -1,0 +1,27 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys
+from implutils import *
+
+if __name__ == "__main__":
+    
+    os.system("script -q .buildonly_log buildonly")
+
+    f = open(".buildonly_log", "r")
+
+    c = f.read()
+
+    f.close()
+
+    os.system("rm .buildonly_log")
+
+    if "ninja: no work to do" in c:
+       
+        # Nothing has changed, no need to run tests.
+        
+        exit()
+
+    os.system("testonly")
+

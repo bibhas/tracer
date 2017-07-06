@@ -1,0 +1,40 @@
+[doctest] run with "--help" for options
+===============================================================================
+main.cpp(16)
+an empty test that will fail because of an exception
+
+TEST CASE FAILED! (threw exception)
+
+===============================================================================
+main.cpp(20)
+normal macros
+
+main.cpp(24) FAILED! (threw exception)
+  CHECK( throws(true) == 42 )
+
+main.cpp(38) FAILED! 
+  CHECK( Approx(0.502) == 0.501 )
+with expansion:
+  CHECK( Approx( 0.502 ) == 0.501 )
+
+TEST CASE FAILED! (threw exception)
+
+===============================================================================
+main.cpp(43)
+exceptions-related macros
+
+main.cpp(44) FAILED!
+  CHECK_THROWS( throws(false) )
+
+main.cpp(45) FAILED! (didn't throw at all)
+  CHECK_THROWS_AS( throws(false), int )
+
+main.cpp(47) FAILED! (threw something else)
+  CHECK_THROWS_AS( throws(true), char )
+
+main.cpp(49) FAILED!
+  REQUIRE_NOTHROW( throws(true) )
+
+===============================================================================
+[doctest] test cases:    4 |    1 passed |    3 failed |    0 skipped
+[doctest] assertions:   12 |    6 passed |    6 failed |

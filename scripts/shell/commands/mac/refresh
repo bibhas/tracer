@@ -1,0 +1,24 @@
+#!/bin/sh
+# 2016 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys
+from implutils import *
+
+if __name__ == "__main__":
+    
+    """
+        Refreshes contents of the build dir by first completely
+        deleting the build dir, and then regenerating the build
+        files (ninja files). Basically, resets the state of the build dir.
+    """
+    
+    p = os.getcwd()
+    
+    os.system("clean")
+    
+    cd("/")
+    
+    os.system("gen ninja")
+    
+    cd(ROOT_DIR)

@@ -1,0 +1,14 @@
+--- doctest.h	2016-11-15 01:30:30.000000000 +0545
++++ doctest.h	2017-01-30 07:34:35.000000000 +0545
+@@ -2527,10 +2527,8 @@
+ #endif // DOCTEST_CONFIG_COLORS_NONE
+                     ) {
+         ContextState* p = getContextState();
+-        if(p->no_colors)
+-            return;
+ #ifdef DOCTEST_CONFIG_COLORS_ANSI
+-        if(isatty(STDOUT_FILENO)) {
++        if(true) {
+             const char* col = "";
+             // clang-format off
+             switch(code) {

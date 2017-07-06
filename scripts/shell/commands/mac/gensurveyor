@@ -1,0 +1,66 @@
+#!/bin/sh
+# 2017 Bibhas Acharya <mail@bibhas.com>
+"exec" "python" "$0" "$@"
+
+import os, sys, imp, datetime
+from implutils import *
+
+sys.dont_write_bytecode = True
+
+# Prepare definitions from DEFINE file in ROOT_DIR
+
+DEFINES = imp.load_source('defines', os.path.join(ROOT_DIR, 'DEFINES'))
+
+# Functions
+
+def copy_dir(template, dest):
+
+  os.system("cp -r %s %s" % (template, dest))
+
+def mod_file(path, variables):
+
+  f = open(path, "r")
+
+  c = f.read()
+
+  f.close()
+
+  f = open(path, "w")
+
+  f.truncate(0)
+
+  f.writelines(c % variables)
+  
+  f.close()
+
+if __name__ == "__main__":
+
+    itemdir = os.path.join(ROOT_DIR, "src", "surveyor")
+
+    destdir = os.path.join(PRJ_PRODUCT_DIR)
+
+    variables = {
+
+        "kCFBundleIdentifier" : DEFINES.variables["surveyor_bundleid"],
+
+        "kIOClass" : DEFINES.variables["surveyor_ioclass"],
+
+        "kDeviceManufacturer" : DEFINES.variables["surveyor_manufacturer"],
+
+        "kCFBundleName" : DEFINES.variables["surveyor_bundlename"],
+
+        "kDeviceName" : DEFINES.variables["surveyor_devicename"]
+    }
+
+    copy_dir(
+
+      os.path.join(ROOT_DIR, "src", "surveyor"), 
+
+      os.path.join(PRJ_PRODUCT_DIR),
+    )
+
+    mod_file(os.path.join(PRJ_PRODUCT_DIR, "surveyor", "Info.plist"), variables)
+
+    mod_file(os.path.join(PRJ_PRODUCT_DIR, "surveyor", "Soundflower.xcodeproj", "project.pbxproj"), variables)
+
+    mod_file(os.path.join(PRJ_PRODUCT_DIR, "surveyor", "SoundflowerDevice.h"), variables)

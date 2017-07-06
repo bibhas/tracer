@@ -1,0 +1,460 @@
+# this file is HEAVILY influenced by https://github.com/boostorg/hana/blob/master/.travis.yml
+
+sudo: false
+language: c++
+
+notifications:
+  email: false
+  # gitter
+  webhooks:
+    urls: https://webhooks.gitter.im/e/10941dd1c67e5e967706
+    on_success: change
+    on_failure: always
+git:
+  depth: 500
+
+# both apt and ccache make the builds slower...
+#cache:
+#  - apt
+#  - ccache
+
+env:
+  global:
+#    - USE_CCACHE=1
+#    - CCACHE_SLOPPINESS=pch_defines,time_macros
+#    - CCACHE_COMPRESS=1
+#    - CCACHE_MAXSIZE=200M
+#    - CCACHE_CPP2=1
+    - CMAKE_OPTIONS_GLOBAL="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+  # Workaround for https://github.com/travis-ci/travis-ci/issues/4681
+  # "Defining the build matrix only with matrix.include leads to an additional, unwanted job"
+  matrix:
+    - TRAVIS_EMPTY_JOB_WORKAROUND=true
+
+addons:
+  coverity_scan:
+    # COVERITY_SCAN_TOKEN added as env var in travis project
+    project:
+      name: onqtam/doctest
+    notification_email: vik.kirilov@gmail.com
+    build_command_prepend: cd examples/hello_world && cmake .
+    build_command: make
+    branch_pattern: coverity_scan
+  # these apt sources will be referenced later (by using *name)
+  apt:
+    sources: &apt_sources
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-precise
+      - llvm-toolchain-precise-3.5
+      - llvm-toolchain-precise-3.6
+      - llvm-toolchain-precise-3.7
+      - llvm-toolchain-precise-3.8
+      - llvm-toolchain-precise-3.9
+
+compiler: clang
+os: linux
+
+matrix:
+  exclude:
+    - env: TRAVIS_EMPTY_JOB_WORKAROUND=true
+
+  include:
+    # coverage
+    - env: COMPILER=g++ COVERALLS_SERVICE_NAME=travis-ci
+      compiler: gcc
+      addons:
+        apt:
+          packages: ["lcov", "curl"]
+
+    # GCC 4.4
+    - env: COMPILER=g++-4.4
+      compiler: gcc
+      addons: &gcc44
+        apt:
+          packages: ["g++-4.4", "valgrind", "g++-4.4-multilib", "libc6-dbg", "libc6-dbg:i386"]
+          sources: *apt_sources
+
+    # GCC 4.5
+    - env: COMPILER=g++-4.5
+      compiler: gcc
+      addons: &gcc45
+        apt:
+          packages: ["g++-4.5", "valgrind", "g++-4.5-multilib", "libc6-dbg", "libc6-dbg:i386"]
+          sources: *apt_sources
+
+    # GCC 4.6
+    - env: COMPILER=g++-4.6
+      compiler: gcc
+      addons: &gcc46
+        apt:
+          packages: [           "valgrind", "g++-4.6-multilib", "libc6-dbg", "libc6-dbg:i386"]
+          sources: *apt_sources
+
+    # GCC 4.7
+    - env: COMPILER=g++-4.7
+      compiler: gcc
+      addons: &gcc47
+        apt:
+          packages: ["g++-4.7", "valgrind", "g++-4.7-multilib", "libc6-dbg", "libc6-dbg:i386"]
+          sources: *apt_sources
+
+    # GCC 4.8
+    - env: COMPILER=g++-4.8 HAS_ASAN_32=true HAS_ASAN_64=true
+      compiler: gcc
+      addons: &gcc48
+        apt:
+          packages: ["g++-4.8", "valgrind", "g++-4.8-multilib", "libc6-dbg", "libc6-dbg:i386"]
+          sources: *apt_sources
+
+    # GCC 4.9
+    - env: COMPILER=g++-4.9 HAS_UBSAN_32=true HAS_ASAN_64=true HAS_UBSAN_64=true # no ASAN_32 - errors when using ASAN_OPTIONS - probably g++ 4.9 bug
+      compiler: gcc
+      addons: &gcc49
+        apt:
+          packages: ["g++-4.9", "valgrind", "g++-4.9-multilib", "libc6-dbg", "libc6-dbg:i386"]
+          sources: *apt_sources
+
+    # GCC 5
+    - env: COMPILER=g++-5 HAS_ASAN_32=true HAS_UBSAN_32=true HAS_ASAN_64=true HAS_UBSAN_64=true ADDITIONAL_CXX_FLAGS=" -fuse-ld=gold"
+      compiler: gcc
+      addons: &gcc5
+        apt:
+          packages: ["g++-5",   "valgrind", "g++-5-multilib",   "libc6-dbg", "libc6-dbg:i386"]
+          sources: *apt_sources
+
+    # GCC 6
+    - env: COMPILER=g++-6 HAS_ASAN_32=true HAS_UBSAN_32=true HAS_ASAN_64=true HAS_UBSAN_64=true ADDITIONAL_CXX_FLAGS=" -fuse-ld=gold"
+      compiler: gcc
+      addons: &gcc6
+        apt:
+          packages: ["g++-6",   "valgrind", "g++-6-multilib",   "libc6-dbg", "libc6-dbg:i386"]
+          sources: *apt_sources
+
+    # Clang 3.4
+    - env: COMPILER=clang++ HAS_ASAN_64=true HAS_UBSAN_64=true
+      addons: &clang
+        apt:
+          packages: [             "valgrind", "g++-multilib", "libc6-dbg", "libc6-dbg:i386", "g++-6"]
+          sources: *apt_sources
+
+    # Clang 3.5
+    - env: COMPILER=clang++-3.5 HAS_ASAN_64=true HAS_UBSAN_64=true
+      addons: &clang35
+        apt:
+          packages: ["clang-3.5", "valgrind", "g++-multilib", "libc6-dbg", "libc6-dbg:i386", "g++-6"]
+          sources: *apt_sources
+
+    # Clang 3.6
+    - env: COMPILER=clang++-3.6 HAS_ASAN_64=true HAS_UBSAN_64=true
+      addons: &clang36
+        apt:
+          packages: ["clang-3.6", "valgrind", "g++-multilib", "libc6-dbg", "libc6-dbg:i386", "g++-6"]
+          sources: *apt_sources
+
+    # Clang 3.7
+    - env: COMPILER=clang++-3.7
+      addons: &clang37
+        apt:
+          packages: ["clang-3.7", "valgrind", "g++-multilib", "libc6-dbg", "libc6-dbg:i386", "g++-6"]
+          sources: *apt_sources
+
+    # Clang 3.8
+    - env: COMPILER=clang++-3.8 HAS_ASAN_64=true HAS_UBSAN_64=true
+      addons: &clang38
+        apt:
+          packages: ["clang-3.8", "valgrind", "g++-multilib", "libc6-dbg", "libc6-dbg:i386", "g++-6"]
+          sources: *apt_sources
+
+    # Clang 3.9
+    - env: COMPILER=clang++-3.9 HAS_ASAN_64=true HAS_UBSAN_64=true
+      addons: &clang39
+        apt:
+          packages: ["clang-3.9", "valgrind", "g++-multilib", "libc6-dbg", "libc6-dbg:i386", "g++-6"]
+          sources: *apt_sources
+
+    # Xcode 6.1 Clang
+    - env: COMPILER=clang++
+      os: osx
+
+    # Xcode 6.2 Clang
+    - env: COMPILER=clang++
+      osx_image: beta-xcode6.2
+      os: osx
+
+    # Xcode 6.3 Clang
+    - env: COMPILER=clang++
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # Xcode 6.4 Clang
+    - env: COMPILER=clang++
+      osx_image: xcode6.4
+      os: osx
+
+    # Xcode 7 Clang
+    - env: COMPILER=clang++ HAS_ASAN_32=true HAS_ASAN_64=true
+      osx_image: xcode7
+      os: osx
+
+    # Xcode 7.1 Clang
+    - env: COMPILER=clang++ HAS_ASAN_32=true HAS_ASAN_64=true
+      osx_image: xcode7.1
+      os: osx
+
+    # Xcode 7.2 Clang
+    - env: COMPILER=clang++ HAS_ASAN_32=true HAS_ASAN_64=true
+      osx_image: xcode7.2
+      os: osx
+
+    # Xcode 7.3 Clang
+    - env: COMPILER=clang++ HAS_ASAN_32=true HAS_ASAN_64=true
+      osx_image: xcode7.3
+      os: osx
+
+    # Xcode 8 Clang
+    - env: COMPILER=clang++ HAS_ASAN_32=true HAS_ASAN_64=true
+      osx_image: xcode8
+      os: osx
+
+    # OSX GCC 4.4
+    - env: COMPILER=g++-4.4
+      compiler: gcc
+      osx_image: beta-xcode6.2
+      os: osx
+
+    # OSX GCC 4.5
+    - env: COMPILER=g++-4.5
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 4.6
+    - env: COMPILER=g++-4.6
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 4.7
+    - env: COMPILER=g++-4.7
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 4.8
+    - env: COMPILER=g++-4.8 HAS_ASAN_32=true HAS_ASAN_64=true
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 4.9
+    - env: COMPILER=g++-4.9 HAS_UBSAN_32=true HAS_UBSAN_64=true # no ASAN_32/ASAN_64 - errors when using ASAN_OPTIONS - probably g++ 4.9 bug
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 5
+    - env: COMPILER=g++-5 HAS_ASAN_32=true HAS_UBSAN_32=true HAS_ASAN_64=true HAS_UBSAN_64=true
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 6
+    - env: COMPILER=g++-6 HAS_ASAN_32=true HAS_UBSAN_32=true HAS_ASAN_64=true HAS_UBSAN_64=true
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX LLVM-GCC
+    - env: COMPILER=g++
+      compiler: gcc
+      os: osx
+
+  allow_failures:
+
+    # Clang 3.9 - failing because the llvm 3.9 ppa is not yet whitelisted...
+    - env: COMPILER=clang++-3.9 HAS_ASAN_64=true HAS_UBSAN_64=true
+
+    # for some reason some of these builds fail sometimes...
+
+    # OSX GCC 4.4
+    - env: COMPILER=g++-4.4
+      compiler: gcc
+      osx_image: beta-xcode6.2
+      os: osx
+
+    # OSX GCC 4.5
+    - env: COMPILER=g++-4.5
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 4.6
+    - env: COMPILER=g++-4.6
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 4.7
+    - env: COMPILER=g++-4.7
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 4.8
+    - env: COMPILER=g++-4.8 HAS_ASAN_32=true HAS_ASAN_64=true
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 4.9
+    - env: COMPILER=g++-4.9 HAS_UBSAN_32=true HAS_UBSAN_64=true # no ASAN_32/ASAN_64 - errors when using ASAN_OPTIONS - probably g++ 4.9 bug
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 5
+    - env: COMPILER=g++-5 HAS_ASAN_32=true HAS_UBSAN_32=true HAS_ASAN_64=true HAS_UBSAN_64=true
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+    # OSX GCC 6
+    - env: COMPILER=g++-6 HAS_ASAN_32=true HAS_UBSAN_32=true HAS_ASAN_64=true HAS_UBSAN_64=true
+      compiler: gcc
+      osx_image: beta-xcode6.3
+      os: osx
+
+before_install:
+  - git submodule update --init --recursive
+
+install:
+  ############################################################################
+  # All the dependencies are installed in ${TRAVIS_BUILD_DIR}/deps/
+  ############################################################################
+
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
+
+  ############################################################################
+  # Install a recent CMake
+  ############################################################################
+
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      CMAKE_URL="http://www.cmake.org/files/v3.5/cmake-3.5.2-Linux-x86_64.tar.gz"
+      mkdir cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
+      export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+    fi
+
+  ############################################################################
+  # Go back to ${TRAVIS_BUILD_DIR}
+  ############################################################################
+
+  - cd ${TRAVIS_BUILD_DIR}
+
+  ############################################################################
+  # Install stuff with homebrew under OSX
+  ############################################################################
+
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      brew update
+      # brew install ccache
+      brew install valgrind
+      # cmake
+      if brew list -1 | grep -q "^cmake\$"; then
+        brew outdated cmake || brew upgrade cmake
+      else
+        brew install cmake
+      fi
+      # gcc
+      if [[ "${COMPILER}" = "g++-4.4" ]]; then
+        brew install gcc44
+      fi
+      if [[ "${COMPILER}" = "g++-4.5" ]]; then
+        brew install gcc45
+      fi
+      if [[ "${COMPILER}" = "g++-4.6" ]]; then
+        brew install gcc46
+      fi
+      if [[ "${COMPILER}" = "g++-4.7" ]]; then
+        brew install gcc47
+      fi
+      if [[ "${COMPILER}" = "g++-4.8" ]]; then
+        brew install gcc48
+      fi
+      if [[ "${COMPILER}" = "g++-4.9" ]]; then
+        brew install gcc49
+      fi
+      if [[ "${COMPILER}" = "g++-5" ]]; then
+        brew install gcc5
+      fi
+      if [[ "${COMPILER}" = "g++-6" ]]; then
+        brew install gcc6
+      fi
+    fi
+  - export CXX="${COMPILER}"
+#  - export CXX="ccache ${COMPILER}"
+#  - ccache -s
+
+before_script:
+  - ${CXX} --version
+
+script:
+  # coverage - do not continue with other build configurations after that
+  - |
+    if [[ "${COVERALLS_SERVICE_NAME}" = "travis-ci" ]]; then
+      cmake ${CMAKE_OPTIONS_GLOBAL} -DCMAKE_BUILD_TYPE=Debug .
+      make -k -j2 && make coveralls
+      exit
+    fi
+
+  # initial run with options
+  - cmake ${CMAKE_OPTIONS_GLOBAL} ${CMAKE_OPTIONS} -DCMAKE_CXX_COMPILER=${CXX} .
+
+  # debug x64
+  - cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -m64" .
+  - make clean && make -k -j2
+  # valgrind for 64bit under osx fails TOO
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then cmake -DTEST_MODE=VALGRIND . && ctest --output-on-failure ; fi
+  - cmake -DTEST_MODE=COMPARE . && ctest --output-on-failure
+  # release x64
+  - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -m64" .
+  - make clean && make -k -j2
+  # valgrind for 64bit under osx fails TOO
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then cmake -DTEST_MODE=VALGRIND . && ctest --output-on-failure ; fi
+  - cmake -DTEST_MODE=COMPARE . && ctest --output-on-failure
+  # debug x86
+  - cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -m32" .
+  - make clean && make -k -j2
+  # valgrind for 32bit under osx fails
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then cmake -DTEST_MODE=VALGRIND . && ctest --output-on-failure ; fi
+  - cmake -DTEST_MODE=COMPARE . && ctest --output-on-failure
+  # release x86
+  - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -m32" .
+  - make clean && make -k -j2
+  # valgrind for 32bit under osx fails
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then cmake -DTEST_MODE=VALGRIND . && ctest --output-on-failure ; fi
+  - cmake -DTEST_MODE=COMPARE . && ctest --output-on-failure
+
+  # sanitizers - again 32/64 bit Debug/Release configs through address/undefined sanitizers
+  - cmake -DTEST_MODE=NORMAL .
+  # on separate commands because when something fails I want to see which one exactly
+  # TODO: when this http://stackoverflow.com/questions/39081183 gets resolved - add these to ASAN as well: check_initialization_order=true:strict_init_order=true
+  - if [[ "${HAS_ASAN_64}" = "true" ]];  then cmake -DCMAKE_BUILD_TYPE=Debug   -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -g -fno-omit-frame-pointer -m64 -fsanitize=address"   . && make clean && make -k -j2 &&  ASAN_OPTIONS=verbosity=2:strict_string_checks=true:detect_odr_violation=2:detect_stack_use_after_return=true ctest --output-on-failure ; fi
+  - if [[ "${HAS_ASAN_32}" = "true" ]];  then cmake -DCMAKE_BUILD_TYPE=Debug   -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -g -fno-omit-frame-pointer -m32 -fsanitize=address"   . && make clean && make -k -j2 &&  ASAN_OPTIONS=verbosity=2:strict_string_checks=true:detect_odr_violation=2:detect_stack_use_after_return=true ctest --output-on-failure ; fi
+  - if [[ "${HAS_ASAN_64}" = "true" ]];  then cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -g -fno-omit-frame-pointer -m64 -fsanitize=address"   . && make clean && make -k -j2 &&  ASAN_OPTIONS=verbosity=2:strict_string_checks=true:detect_odr_violation=2:detect_stack_use_after_return=true ctest --output-on-failure ; fi
+  - if [[ "${HAS_ASAN_32}" = "true" ]];  then cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -g -fno-omit-frame-pointer -m32 -fsanitize=address"   . && make clean && make -k -j2 &&  ASAN_OPTIONS=verbosity=2:strict_string_checks=true:detect_odr_violation=2:detect_stack_use_after_return=true ctest --output-on-failure ; fi
+  - if [[ "${HAS_UBSAN_64}" = "true" ]]; then cmake -DCMAKE_BUILD_TYPE=Debug   -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -g -fno-omit-frame-pointer -m64 -fsanitize=undefined" . && make clean && make -k -j2 && UBSAN_OPTIONS=verbosity=2                                                                                     ctest --output-on-failure ; fi
+  - if [[ "${HAS_UBSAN_32}" = "true" ]]; then cmake -DCMAKE_BUILD_TYPE=Debug   -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -g -fno-omit-frame-pointer -m32 -fsanitize=undefined" . && make clean && make -k -j2 && UBSAN_OPTIONS=verbosity=2                                                                                     ctest --output-on-failure ; fi
+  - if [[ "${HAS_UBSAN_64}" = "true" ]]; then cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -g -fno-omit-frame-pointer -m64 -fsanitize=undefined" . && make clean && make -k -j2 && UBSAN_OPTIONS=verbosity=2                                                                                     ctest --output-on-failure ; fi
+  - if [[ "${HAS_UBSAN_32}" = "true" ]]; then cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -g -fno-omit-frame-pointer -m32 -fsanitize=undefined" . && make clean && make -k -j2 && UBSAN_OPTIONS=verbosity=2                                                                                     ctest --output-on-failure ; fi
+
+  # test c++0x mode for warnings
+  - cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="${ADDITIONAL_CXX_FLAGS} -m64" -DWITH_CPP11=1 .
+  - make clean && make -k -j2
+
+#  - ccache -s
+
+#after_script:
+#  - cat compile_commands.json
