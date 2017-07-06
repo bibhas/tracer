@@ -15,7 +15,9 @@ for d in DEFINES.variables.keys():
 
   DEFINES.variables[d] = "'%s'" % DEFINES.variables[d]
 
-DEFINES.variables["app_target_name"] = (DEFINES.variables["app_name"]).replace(".app", "")
+if DEFINES.variables.has_key("app_name"):
+
+  DEFINES.variables["app_target_name"] = (DEFINES.variables["app_name"]).replace(".app", "")
 
 # Helper functions
 
