@@ -9,7 +9,7 @@
     {
       'target_name' : 'lldb',
       'type' : '<(CONTAINER)',
-      'direct_dependent_settings' : {
+      'all_dependent_settings' : {
         'include_dirs' : [
           '<(LLDB_LIBROOT)/include'
         ],
