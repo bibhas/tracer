@@ -5,7 +5,9 @@
 #include <lldb/API/LLDB.h>
 #include <mach/mach.h>
 #include <mach/mach_time.h>
+#include <CoreMediaIO/CMIOHardwareObject.h>
 #include <utils/scope_exit_guard.h>
+#include <utils/fourchar.h>
 #include <utils/compute.h>
 
 int main(int argc, const char **argv) {
@@ -41,6 +43,19 @@ int main(int argc, const char **argv) {
     auto callback = [](void *baton, lldb::SBProcess& process, lldb::SBThread& thread, lldb::SBBreakpointLocation& location) -> bool {
       lldb::SBAddress address = location.GetAddress();
       std::cout << address.GetFileAddress() << ", " << thread.GetIndexID() << ", " << mach_absolute_time() << std::endl;
+      lldb::SBFrame frame = thread.GetFrameAtIndex(0);
+      // x86_64 calling convention : RDI, RSI, RDX, RCX, R8, R9, XMM0–7
+      lldb::SBValue rsiValue = frame.FindValue("rsi", lldb::eValueTypeRegister);
+      uint64_t ptrAddress = rsiValue.GetValueAsUnsigned();
+      lldb::SBError readError;
+      CMIOObjectPropertyAddress readAddress;
+      size_t toReadSize = sizeof(CMIOObjectPropertyAddress);
+      process.ReadMemory(ptrAddress, &readAddress, toReadSize, readError);
+      if (readError.Fail()) {
+        std::cout << "Error Message : " << readError.GetCString() << std::endl;
+        exit(-1);
+      }
+      std::cout << IntToFourCharString(readAddress.mSelector) << std::endl;
       return true;
     };
     resp.SetCallback(callback, 0);
