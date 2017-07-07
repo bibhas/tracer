@@ -30,7 +30,7 @@ int main(int argc, const char **argv) {
     std::cout << "Creating target..." << std::endl;
     lldb::SBError error;
     lldb::SBTarget resp = debugger.CreateTarget(
-      "/Applications/Facetime.app/Contents/MacOS/Facetime", "x86_64", NULL, true, error
+      "/usr/libexec/avconferenced", "x86_64", NULL, true, error
     );
     assert(error.Success() && "Failed to create target!");
     assert(resp.IsValid() && "Target created but is invalid!");
@@ -39,11 +39,12 @@ int main(int argc, const char **argv) {
   // Add breakpoints
   lldb::SBBreakpoint breakpoint = COMPUTE({
     std::cout << "Creating breakpoint..." << std::endl;
-    lldb::SBBreakpoint resp = target.BreakpointCreateByName("CMIOObjectHasProperty");
+    lldb::SBBreakpoint resp = target.BreakpointCreateByName("CMIODeviceStartStream");
     auto callback = [](void *baton, lldb::SBProcess& process, lldb::SBThread& thread, lldb::SBBreakpointLocation& location) -> bool {
       lldb::SBAddress address = location.GetAddress();
       std::cout << address.GetFileAddress() << ", " << thread.GetIndexID() << ", " << mach_absolute_time() << std::endl;
       lldb::SBFrame frame = thread.GetFrameAtIndex(0);
+      /*
       // x86_64 calling convention : RDI, RSI, RDX, RCX, R8, R9, XMM0–7
       lldb::SBValue rsiValue = frame.FindValue("rsi", lldb::eValueTypeRegister);
       uint64_t ptrAddress = rsiValue.GetValueAsUnsigned();
@@ -56,13 +57,20 @@ int main(int argc, const char **argv) {
         exit(-1);
       }
       std::cout << IntToFourCharString(readAddress.mSelector) << std::endl;
+      */
       return true;
     };
     resp.SetCallback(callback, 0);
     return resp;
   });
   // Start process
-  lldb::SBProcess process = target.LaunchSimple(0, 0, "/Users/bibhas/Desktop");
+  lldb::SBProcess process = COMPUTE({
+    lldb::SBError error;
+    lldb::SBListener mockListener;
+    lldb::SBProcess resp = target.AttachToProcessWithName(mockListener, "avconferenced", false, error);
+    assert(error.Success() && "Failed to attach to remote process!");
+    return resp;
+  });
   while (1) {
     lldb::StateType state = process.GetState();
     if (state == lldb::eStateStopped) {
