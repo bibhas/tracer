@@ -39,11 +39,12 @@ int main(int argc, const char **argv) {
   // Add breakpoints
   lldb::SBBreakpoint breakpoint = COMPUTE({
     std::cout << "Creating breakpoint..." << std::endl;
-    lldb::SBBreakpoint resp = target.BreakpointCreateByName("CMIOObjectHasProperty");
+    lldb::SBBreakpoint resp = target.BreakpointCreateByName("_CMIOObjectHasProperty");
     auto callback = [](void *baton, lldb::SBProcess& process, lldb::SBThread& thread, lldb::SBBreakpointLocation& location) -> bool {
       lldb::SBAddress address = location.GetAddress();
       std::cout << address.GetFileAddress() << ", " << thread.GetIndexID() << ", " << mach_absolute_time() << std::endl;
       lldb::SBFrame frame = thread.GetFrameAtIndex(0);
+      std::cout << "Now in function named : " << frame.GetFunctionName() << " in process with pid = " << process.GetProcessID() << std::endl;
       // x86_64 calling convention : RDI, RSI, RDX, RCX, R8, R9, XMM0–7
       lldb::SBValue rsiValue = frame.FindValue("rsi", lldb::eValueTypeRegister);
       uint64_t ptrAddress = rsiValue.GetValueAsUnsigned();
@@ -56,6 +57,15 @@ int main(int argc, const char **argv) {
         exit(-1);
       }
       std::cout << IntToFourCharString(readAddress.mSelector) << std::endl;
+      /*
+      // Next, step out
+      thread.StepOut();
+      // Then get stop return value
+      lldb::SBValue returnValue = thread.GetStopReturnValue();
+      uint64_t boolValue = returnValue.GetValueAsUnsigned();
+      std::cout << "\tReturned " << boolValue << std::endl;
+      lldb::SBFrame newFrame = thread.GetFrameAtIndex(0);
+      */
       return true;
     };
     resp.SetCallback(callback, 0);
