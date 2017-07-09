@@ -72,58 +72,17 @@ int main(int argc, const char **argv) {
     return resp;
   });
   // Add breakpoints
-  lldb::SBBreakpoint breakpoint = COMPUTE({
-    std::cout << "Creating breakpoint..." << std::endl;
-    lldb::SBBreakpoint resp = target.BreakpointCreateByName("CMIOObjectHasProperty");
-    auto callback = [](void *baton, lldb::SBProcess& process, lldb::SBThread& thread, lldb::SBBreakpointLocation& location) -> bool {
-      lldb::SBAddress address = location.GetAddress();
-      std::cout << address.GetFileAddress() << ", " << thread.GetIndexID() << ", " << mach_absolute_time() << std::endl;
-      lldb::SBFrame frame = thread.GetFrameAtIndex(0);
-      std::cout << "Now in function named : " << frame.GetFunctionName() << " in process with pid = " << process.GetProcessID() << std::endl;
-      // x86_64 calling convention : RDI, RSI, RDX, RCX, R8, R9, XMM0–7
-      lldb::SBValue rsiValue = frame.FindValue("rsi", lldb::eValueTypeRegister);
-      uint64_t ptrAddress = rsiValue.GetValueAsUnsigned();
-      lldb::SBError readError;
-      CMIOObjectPropertyAddress readAddress;
-      size_t toReadSize = sizeof(CMIOObjectPropertyAddress);
-      process.ReadMemory(ptrAddress, &readAddress, toReadSize, readError);
-      if (readError.Fail()) {
-        std::cout << "Error Message : " << readError.GetCString() << std::endl;
-        exit(-1);
-      }
-      std::cout << readAddress.mSelector << std::endl;
-      std::cout << IntToFourCharString(readAddress.mSelector) << std::endl;
-      // Next, step out
-      thread.StepOut();
-      usleep(1000);
-      // Then get stop return value
-      lldb::SBThread newThread = process.GetSelectedThread();
-      lldb::SBFrame newFrame = newThread.GetFrameAtIndex(0);
-      lldb::SBValue raxValue = newFrame.FindValue("rax", lldb::eValueTypeRegister);
-      uint64_t boolValue = raxValue.GetValueAsUnsigned();
-      std::cout << "\tReturned " << boolValue << std::endl;
-      return true;
-    };
-    resp.SetCallback(callback, 0);
-    return resp;
-  });
+  lldb::SBBreakpoint breakpoint = target.BreakpointCreateByName("CMIOObjectHasProperty");
+  // Setup listener
+  lldb::SBListener listener = debugger.GetListener();
   // Start process
   lldb::SBProcess process = COMPUTE({
     lldb::SBError error;
-    lldb::SBListener mockListener;
-    lldb::SBProcess resp = target.AttachToProcessWithName(mockListener, "avconferenced", false, error);
+    lldb::SBProcess resp = target.AttachToProcessWithName(listener, "avconferenced", false, error);
     assert(error.Success() && "Failed to attach to remote process!");
     return resp;
   });
-  while (1) {
-    lldb::StateType state = process.GetState();
-    if (state == lldb::eStateStopped) {
-      process.Continue();
-    }
-    else if (state == lldb::eStateExited) {
-      std::cerr << "Program exited!" << std::endl;
-      break;
-    }
+  for (;;) {
   }
   // We're done
   std::cout << "Done." << std::endl;
