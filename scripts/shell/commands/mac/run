@@ -7,7 +7,7 @@ from implutils import *
 
 if __name__ == "__main__":
 
-  guessed_path = os.path.join(PRJ_PRODUCT_DIR, "tracer")
+  guessed_path = os.path.join(PRJ_PRODUCT_DIR, "lldb_tracer")
 
   if not os.path.exists(guessed_path):
     
