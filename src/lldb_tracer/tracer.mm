@@ -11,6 +11,38 @@
 #include <utils/compute.h>
 #include "CMIOTypes.h"
 
+struct PropertyDataTracer {
+  PropertyDataTracer(lldb::SBProcess& process, lldb::SBTarget& target) {
+    // Note arguments (ptrs) and ...
+  }
+  void logData() {
+    // read off arguments ptrs and log response
+  }
+};
+
+static inline lldb::SBBreakpoint getCreateBreakpointForFunctionWithName(lldb::SBTarget& target, const std::string& funcName) {
+  return target.BreakpointCreateByName(funcName.c_str());
+}
+
+static inline lldb::SBBreakpoint getCreateBreakpointForAddressAtModule(lldb::SBTarget& target, lldb::addr_t address, const std::string& moduleName) {
+  lldb::SBModule cmioModule = COMPUTE({
+    for (int i = 0; i < target.GetNumModules(); i++) {
+      lldb::SBModule module = target.GetModuleAtIndex(i);
+      lldb::SBFileSpec fileSpec = module.GetFileSpec();
+      if (std::string(fileSpec.GetFilename()) == moduleName) {
+        return module;
+      }
+    }
+    assert(false && "Could not find requested module in module list!!");
+  });
+  // Address to breakpoint in CoreMediaIO.framework ko address 0x31415
+  lldb::SBAddress breakpointAddress = cmioModule.ResolveFileAddress(address);
+  return target.BreakpointCreateBySBAddress(breakpointAddress);
+}
+
+uint64_t cachedPtrAddress;
+uint64_t cachedObjectID;
+
 int main(int argc, const char **argv) {
   // Setup debugger environment
   lldb::SBDebugger::Initialize();
@@ -38,35 +70,58 @@ int main(int argc, const char **argv) {
     return resp;
   });
   // Add breakpoints
-  lldb::SBBreakpoint breakpoint = COMPUTE({
-    std::cout << "Creating breakpoint..." << std::endl;
-    lldb::SBBreakpoint resp = target.BreakpointCreateByName("CMIOObjectGetPropertyData");
+  lldb::SBBreakpoint preBreakpoint = COMPUTE({
+    std::cout << "Creating pre breakpoint..." << std::endl;
+    // Address to breakpoint in CoreMediaIO.framework ko address 0x31415
+    lldb::SBBreakpoint resp = getCreateBreakpointForFunctionWithName(target, "CMIOObjectHasProperty");
     auto callback = [](void *baton, lldb::SBProcess& process, lldb::SBThread& thread, lldb::SBBreakpointLocation& location) -> bool {
-      lldb::SBFrame frame = thread.GetFrameAtIndex(0);
-      std::cout << "Now inside : " << frame.GetFunctionName() << " (in process with pid = " << process.GetProcessID() << ")" << std::endl;
+      lldb::SBFrame frame = thread.GetSelectedFrame();
+      std::cout << "Pre breakpointing at : " << frame.GetFunctionName() << " (in process with pid = " << process.GetProcessID() << ")" << std::endl;
       // x86_64 calling convention : RDI, RSI, RDX, RCX, R8, R9, XMM0–7
       lldb::SBValue rdiValue = frame.FindValue("rdi", lldb::eValueTypeRegister);
+      cachedObjectID = rdiValue.GetValueAsUnsigned();
       lldb::SBValue rsiValue = frame.FindValue("rsi", lldb::eValueTypeRegister);
-      uint64_t ptrAddress = rsiValue.GetValueAsUnsigned();
+      cachedPtrAddress = rsiValue.GetValueAsUnsigned();
       lldb::SBError readError;
       CMIOObjectPropertyAddress readAddress;
       size_t toReadSize = sizeof(CMIOObjectPropertyAddress);
-      process.ReadMemory(ptrAddress, &readAddress, toReadSize, readError);
+      process.ReadMemory(cachedPtrAddress, &readAddress, toReadSize, readError);
       if (readError.Fail()) {
         std::cout << "Error Message : " << readError.GetCString() << std::endl;
         exit(-1);
       }
-      std::cout << "FOR OBJECTID = " << rdiValue.GetValueAsUnsigned() << std::endl;
+      std::cout << "ID = " << rdiValue.GetValueAsUnsigned() << " "; 
+      std::cout << "SEL = " << tryTranslateSelectorName(readAddress.mSelector) << " ";
+      std::cout << "SCOPE = " << tryTranslateScopeName(readAddress.mScope) << " "; 
+      std::cout << "ELEM = " << tryTranslateElementName(readAddress.mElement) << std::endl;
+      return true;
+    };
+    resp.SetCallback(callback, 0);
+    return resp;
+  });
+  lldb::SBBreakpoint postBreakpoint = COMPUTE({
+    std::cout << "Creating post breakpoint..." << std::endl;
+    // Address to breakpoint in CoreMediaIO.framework ko address 0x31415
+    lldb::SBBreakpoint resp = getCreateBreakpointForAddressAtModule(target, 0x31415, "CoreMediaIO");
+    auto callback = [](void *baton, lldb::SBProcess& process, lldb::SBThread& thread, lldb::SBBreakpointLocation& location) -> bool {
+      lldb::SBFrame frame = thread.GetSelectedFrame();
+      std::cout << "Post breakpointing at : " << frame.GetFunctionName() << " (in process with pid = " << process.GetProcessID() << ")" << std::endl;
+      // x86_64 calling convention : RDI, RSI, RDX, RCX, R8, R9, XMM0–7
+      lldb::SBError readError;
+      CMIOObjectPropertyAddress readAddress;
+      size_t toReadSize = sizeof(CMIOObjectPropertyAddress);
+      process.ReadMemory(cachedPtrAddress, &readAddress, toReadSize, readError);
+      if (readError.Fail()) {
+        std::cout << "Error Message : " << readError.GetCString() << std::endl;
+        exit(-1);
+      }
+      std::cout << "FOR OBJECTID = " << cachedObjectID << std::endl;
       std::cout << "\tGot property selector = " << tryTranslateSelectorName(readAddress.mSelector) << " (" << IntToFourCharString(readAddress.mSelector) << ")" << std::endl;
       std::cout << "\tGot scope = " << tryTranslateScopeName(readAddress.mScope) << std::endl;
       std::cout << "\tGot element = " << tryTranslateElementName(readAddress.mElement) << std::endl;
-      // Next, step out
-      thread.StepOut();
-      // Then get stop return value
-      lldb::SBValue returnValue = thread.GetStopReturnValue();
-      uint64_t boolValue = returnValue.GetValueAsUnsigned();
-      std::cout << "\tReturned " << boolValue << std::endl;
-      lldb::SBFrame newFrame = thread.GetFrameAtIndex(0);
+      // Then read return value
+      lldb::SBValue returnValue = frame.FindValue("rax", lldb::eValueTypeRegister);
+      std::cout << "\tReturned " << returnValue.GetValueAsUnsigned() << std::endl;
       return true;
     };
     resp.SetCallback(callback, 0);
@@ -85,6 +140,7 @@ int main(int argc, const char **argv) {
     lldb::StateType state = process.GetState();
     if (state == lldb::eStateStopped) {
       process.Continue();
+      std::cout << "----------------" << std::endl;
     }
     else if (state == lldb::eStateExited) {
       std::cerr << "Program exited!" << std::endl;
