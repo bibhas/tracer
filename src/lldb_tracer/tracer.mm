@@ -11,15 +11,6 @@
 #include <utils/compute.h>
 #include "CMIOTypes.h"
 
-struct PropertyDataTracer {
-  PropertyDataTracer(lldb::SBProcess& process, lldb::SBTarget& target) {
-    // Note arguments (ptrs) and ...
-  }
-  void logData() {
-    // read off arguments ptrs and log response
-  }
-};
-
 static inline lldb::SBBreakpoint getCreateBreakpointForFunctionWithName(lldb::SBTarget& target, const std::string& funcName) {
   return target.BreakpointCreateByName(funcName.c_str());
 }
@@ -40,8 +31,12 @@ static inline lldb::SBBreakpoint getCreateBreakpointForAddressAtModule(lldb::SBT
   return target.BreakpointCreateBySBAddress(breakpointAddress);
 }
 
-uint64_t cachedPtrAddress;
-uint64_t cachedObjectID;
+struct PropertyDataCache {
+  uint64_t objectID;
+  uint64_t addressPtrAddress;
+  uint64_t dataUsedPtrAddress;
+  uint64_t dataPtrAddress;
+} cachedPropertyData;
 
 int main(int argc, const char **argv) {
   // Setup debugger environment
@@ -73,24 +68,24 @@ int main(int argc, const char **argv) {
   lldb::SBBreakpoint preBreakpoint = COMPUTE({
     std::cout << "Creating pre breakpoint..." << std::endl;
     // Address to breakpoint in CoreMediaIO.framework ko address 0x31415
-    lldb::SBBreakpoint resp = getCreateBreakpointForFunctionWithName(target, "CMIOObjectHasProperty");
+    lldb::SBBreakpoint resp = getCreateBreakpointForFunctionWithName(target, "CMIOObjectGetPropertyData");
     auto callback = [](void *baton, lldb::SBProcess& process, lldb::SBThread& thread, lldb::SBBreakpointLocation& location) -> bool {
       lldb::SBFrame frame = thread.GetSelectedFrame();
       std::cout << "Pre breakpointing at : " << frame.GetFunctionName() << " (in process with pid = " << process.GetProcessID() << ")" << std::endl;
       // x86_64 calling convention : RDI, RSI, RDX, RCX, R8, R9, XMM0–7
-      lldb::SBValue rdiValue = frame.FindValue("rdi", lldb::eValueTypeRegister);
-      cachedObjectID = rdiValue.GetValueAsUnsigned();
-      lldb::SBValue rsiValue = frame.FindValue("rsi", lldb::eValueTypeRegister);
-      cachedPtrAddress = rsiValue.GetValueAsUnsigned();
+      cachedPropertyData.objectID = frame.FindValue("rdi", lldb::eValueTypeRegister).GetValueAsUnsigned();
+      cachedPropertyData.addressPtrAddress = frame.FindValue("rsi", lldb::eValueTypeRegister).GetValueAsUnsigned();
+      cachedPropertyData.dataUsedPtrAddress = frame.FindValue("r9", lldb::eValueTypeRegister).GetValueAsUnsigned();
+      cachedPropertyData.dataPtrAddress = frame.FindValue("xmm0", lldb::eValueTypeRegister).GetValueAsUnsigned();
       lldb::SBError readError;
       CMIOObjectPropertyAddress readAddress;
       size_t toReadSize = sizeof(CMIOObjectPropertyAddress);
-      process.ReadMemory(cachedPtrAddress, &readAddress, toReadSize, readError);
+      process.ReadMemory(cachedPropertyData.addressPtrAddress, &readAddress, toReadSize, readError);
       if (readError.Fail()) {
         std::cout << "Error Message : " << readError.GetCString() << std::endl;
         exit(-1);
       }
-      std::cout << "ID = " << rdiValue.GetValueAsUnsigned() << " "; 
+      std::cout << "ID = " << cachedPropertyData.objectID << " "; 
       std::cout << "SEL = " << tryTranslateSelectorName(readAddress.mSelector) << " ";
       std::cout << "SCOPE = " << tryTranslateScopeName(readAddress.mScope) << " "; 
       std::cout << "ELEM = " << tryTranslateElementName(readAddress.mElement) << std::endl;
@@ -102,7 +97,7 @@ int main(int argc, const char **argv) {
   lldb::SBBreakpoint postBreakpoint = COMPUTE({
     std::cout << "Creating post breakpoint..." << std::endl;
     // Address to breakpoint in CoreMediaIO.framework ko address 0x31415
-    lldb::SBBreakpoint resp = getCreateBreakpointForAddressAtModule(target, 0x31415, "CoreMediaIO");
+    lldb::SBBreakpoint resp = getCreateBreakpointForAddressAtModule(target, 0x31a94, "CoreMediaIO");
     auto callback = [](void *baton, lldb::SBProcess& process, lldb::SBThread& thread, lldb::SBBreakpointLocation& location) -> bool {
       lldb::SBFrame frame = thread.GetSelectedFrame();
       std::cout << "Post breakpointing at : " << frame.GetFunctionName() << " (in process with pid = " << process.GetProcessID() << ")" << std::endl;
@@ -110,12 +105,12 @@ int main(int argc, const char **argv) {
       lldb::SBError readError;
       CMIOObjectPropertyAddress readAddress;
       size_t toReadSize = sizeof(CMIOObjectPropertyAddress);
-      process.ReadMemory(cachedPtrAddress, &readAddress, toReadSize, readError);
+      process.ReadMemory(cachedPropertyData.addressPtrAddress, &readAddress, toReadSize, readError);
       if (readError.Fail()) {
         std::cout << "Error Message : " << readError.GetCString() << std::endl;
         exit(-1);
       }
-      std::cout << "FOR OBJECTID = " << cachedObjectID << std::endl;
+      std::cout << "FOR OBJECTID = " << cachedPropertyData.objectID << std::endl;
       std::cout << "\tGot property selector = " << tryTranslateSelectorName(readAddress.mSelector) << " (" << IntToFourCharString(readAddress.mSelector) << ")" << std::endl;
       std::cout << "\tGot scope = " << tryTranslateScopeName(readAddress.mScope) << std::endl;
       std::cout << "\tGot element = " << tryTranslateElementName(readAddress.mElement) << std::endl;
