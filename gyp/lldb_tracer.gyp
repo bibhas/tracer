@@ -1,18 +1,18 @@
-# tracer.gyp
+# lldb_tracer.gyp
 # 2017 Bibhas Acharya <mail@bibhas.com>
 
 {
   'variables' : {
-    'TRACER_SRCROOT' : '../src/tracer',
+    'LLDB_TRACER_SRCROOT' : '../src/lldb_tracer',
   },
   'targets' : [
     {
-      'target_name' : 'tracer',
-      'product_name' : 'tracer',
+      'target_name' : 'lldb_tracer',
+      'product_name' : 'lldb_tracer',
       'type' : 'executable',
       'mac_bundle' : 0,
       'sources' : [
-        '<(TRACER_SRCROOT)/tracer.mm'
+        '<(LLDB_TRACER_SRCROOT)/tracer.mm'
       ],
       'link_settings' : {
         'libraries' : [

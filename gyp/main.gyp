@@ -7,7 +7,8 @@
       'target_name' : 'All',
       'type' : '<(CONTAINER)',
       'dependencies' : [
-        'tracer.gyp:tracer'
+        'lldb_tracer.gyp:lldb_tracer',
+        'cmio_plugin.gyp:cmioplugintracer'
       ]
     }
   ]
